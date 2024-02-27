@@ -1,0 +1,45 @@
+import sqlite3
+import pandas as pd
+
+
+def execute_sql_query_and_store_to_csv(sql_query, csv_filename):
+    
+    conn = sqlite3.connect('sales_database.db')
+    
+    sql_results = conn.execute(sql_query).fetchall()
+   
+    with open(csv_filename, 'w') as f:
+        f.write("Customer;Age;Item;Quantity\n")
+        for row in sql_results:
+            f.write(";".join(map(str, row)) + "\n")
+  
+    conn.close()
+
+
+
+#SQL query to extract total quantities of each item bought per customer aged 18-35.
+
+sql_query = """
+SELECT c.Customer_id, c.Age, i.item_name, COALESCE(SUM(o.quantity), 0) AS Quantity
+FROM Customer c
+LEFT JOIN Sales s ON c.Customer_id = s.Customer_id
+LEFT JOIN Orders o ON s.Sales_id = o.Sales_id
+LEFT JOIN Items i ON o.item_id = i.item_id
+WHERE c.Age BETWEEN 18 AND 35
+GROUP BY c.Customer_id, i.item_name
+HAVING Quantity > 0
+"""
+
+# Store SQL results to a CSV file using the function
+
+execute_sql_query_and_store_to_csv(sql_query, 'sales_results_sql.csv')
+
+# Connect to the SQLite3 database
+conn = sqlite3.connect('sales_database.db')
+
+# Read SQL query into a Pandas DataFrame
+df_sales = pd.read_sql_query(sql_query, conn)
+
+conn.close()
+# Store Pandas DataFrame to a CSV file
+df_sales.to_csv('sales_results_pandas.csv', sep=';', index=False)
